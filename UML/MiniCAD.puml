@@ -1,0 +1,140 @@
+@startuml MiniCAD
+
+title Diagramma delle classi - MiniCAD OOP
+
+' =========================
+' CLASSE BASE
+' =========================
+
+abstract class EntitaGeometrica {
+    - id : int
+    - nome : string
+    - colore : Colore
+    - layer : Layer
+
+    + Descrizione() : string
+}
+
+
+' =========================
+' ENTITÀ GEOMETRICHE
+' =========================
+
+class Punto {
+    - x : double
+    - y : double
+
+    + Distanza(altro : Punto) : double
+}
+
+class Linea {
+    - inizio : Punto
+    - fine : Punto
+
+    + Lunghezza() : double
+}
+
+
+' =========================
+' FIGURE GEOMETRICHE
+' =========================
+
+abstract class FiguraGeometrica {
+    + Area() : double
+    + Perimetro() : double
+}
+
+class Rettangolo {
+    - origine : Punto
+    - base : double
+    - altezza : double
+
+    + Area() : double
+    + Perimetro() : double
+}
+
+class Quadrato 
+
+class Triangolo {
+    - latoA : double
+    - latoB : double
+    - latoC : double
+
+    + Area() : double
+    + Perimetro() : double
+}
+
+
+' =========================
+' GESTIONE DOCUMENTO
+' =========================
+
+class DocumentoCAD {
+    - nome : string
+    - entita : List~EntitaGeometrica~
+
+    + AggiungiEntita(entita : EntitaGeometrica) : void
+    + EliminaEntita(id : int) : bool
+    + CercaEntita(id : int) : EntitaGeometrica
+    + StampaElenco() : void
+    + ContaEntita() : int
+}
+
+
+' =========================
+' LAYER
+' =========================
+
+class Layer {
+    - nome : string
+    - visibile : bool
+
+    + Attiva() : void
+    + Disattiva() : void
+}
+
+
+' =========================
+' ENUM COLORE
+' =========================
+
+enum Colore {
+    Nero
+    Rosso
+    Verde
+    Blu
+    Giallo
+    Magenta
+    Ciano
+}
+
+
+' =========================
+' EREDITARIETÀ
+' =========================
+
+EntitaGeometrica <|-- Punto
+EntitaGeometrica <|-- Linea
+EntitaGeometrica <|-- FiguraGeometrica
+
+FiguraGeometrica <|-- Rettangolo
+Rettangolo <|-- Quadrato
+FiguraGeometrica <|-- Triangolo
+
+
+' =========================
+' RELAZIONI
+' =========================
+
+DocumentoCAD "1" o-- "*" EntitaGeometrica
+
+Linea "1" *-- "2" Punto
+
+Rettangolo "1" *-- "1" Punto
+
+EntitaGeometrica "*" --> "1" Layer
+
+EntitaGeometrica --> Colore
+
+
+@enduml
