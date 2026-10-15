@@ -12,13 +12,8 @@ abstract class EntitaGeometrica {
     - colore : Colore
     - layer : Layer
 
-    + Descrizione() : string
+    {abstract} + Descrizione() : string
 }
-
-
-' =========================
-' ENTITÀ GEOMETRICHE
-' =========================
 
 class Punto {
     - x : double
@@ -34,14 +29,9 @@ class Linea {
     + Lunghezza() : double
 }
 
-
-' =========================
-' FIGURE GEOMETRICHE
-' =========================
-
 abstract class FiguraGeometrica {
-    + Area() : double
-    + Perimetro() : double
+    {abstract} + Area() : double
+    {abstract} + Perimetro() : double
 }
 
 class Rettangolo {
@@ -53,7 +43,7 @@ class Rettangolo {
     + Perimetro() : double
 }
 
-class Quadrato 
+class Quadrato
 
 class Triangolo {
     - latoA : double
@@ -63,11 +53,6 @@ class Triangolo {
     + Area() : double
     + Perimetro() : double
 }
-
-
-' =========================
-' GESTIONE DOCUMENTO
-' =========================
 
 class DocumentoCAD {
     - nome : string
@@ -80,11 +65,6 @@ class DocumentoCAD {
     + ContaEntita() : int
 }
 
-
-' =========================
-' LAYER
-' =========================
-
 class Layer {
     - nome : string
     - visibile : bool
@@ -92,11 +72,6 @@ class Layer {
     + Attiva() : void
     + Disattiva() : void
 }
-
-
-' =========================
-' ENUM COLORE
-' =========================
 
 enum Colore {
     Nero
@@ -108,33 +83,21 @@ enum Colore {
     Ciano
 }
 
-
 ' =========================
-' EREDITARIETÀ
+' RELAZIONI
 ' =========================
 
 EntitaGeometrica <|-- Punto
 EntitaGeometrica <|-- Linea
 EntitaGeometrica <|-- FiguraGeometrica
-
 FiguraGeometrica <|-- Rettangolo
 Rettangolo <|-- Quadrato
 FiguraGeometrica <|-- Triangolo
 
-
-' =========================
-' RELAZIONI
-' =========================
-
 DocumentoCAD "1" o-- "*" EntitaGeometrica
-
 Linea "1" *-- "2" Punto
-
 Rettangolo "1" *-- "1" Punto
-
 EntitaGeometrica "*" --> "1" Layer
-
 EntitaGeometrica --> Colore
-
 
 @enduml
