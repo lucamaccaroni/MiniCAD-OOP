@@ -2,9 +2,9 @@
 
 title Diagramma delle classi - MiniCAD OOP
 
-' =========================
-' CLASSE BASE
-' =========================
+top to bottom direction
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
 
 abstract class EntitaGeometrica {
     - id : int
@@ -30,26 +30,23 @@ class Linea {
 }
 
 abstract class FiguraGeometrica {
+    + vertici : IReadOnlyList~Punto~
+
     {abstract} + Area() : double
     {abstract} + Perimetro() : double
 }
 
 class Rettangolo {
-    - origine : Punto
-    - base : double
-    - altezza : double
-
     + Area() : double
     + Perimetro() : double
 }
 
-class Quadrato
+class Quadrato {
+    + Area() : double
+    + Perimetro() : double
+}
 
 class Triangolo {
-    - latoA : double
-    - latoB : double
-    - latoC : double
-
     + Area() : double
     + Perimetro() : double
 }
@@ -83,21 +80,45 @@ enum Colore {
     Ciano
 }
 
-' =========================
-' RELAZIONI
-' =========================
-
 EntitaGeometrica <|-- Punto
 EntitaGeometrica <|-- Linea
 EntitaGeometrica <|-- FiguraGeometrica
 FiguraGeometrica <|-- Rettangolo
-Rettangolo <|-- Quadrato
+FiguraGeometrica <|-- Quadrato
 FiguraGeometrica <|-- Triangolo
 
 DocumentoCAD "1" o-- "*" EntitaGeometrica
-Linea "1" *-- "2" Punto
-Rettangolo "1" *-- "1" Punto
+Linea "0..*" --> "1" Punto : inizio
+Linea "0..*" --> "1" Punto : fine
+FiguraGeometrica "1" -- "0..*" Punto : vertici
 EntitaGeometrica "*" --> "1" Layer
 EntitaGeometrica --> Colore
+
+note right of Triangolo
+  Vincolo: esattamente 3 vertici distinti
+  e non allineati.
+end note
+
+note right of Rettangolo
+  Vincolo: esattamente 4 vertici ordinati
+  lungo il contorno, che definiscono
+  un rettangolo valido.
+end note
+
+note right of Quadrato
+  Vincolo: esattamente 4 vertici ordinati
+  lungo il contorno, con tutti i lati uguali
+  e tutti gli angoli interni retti.
+end note
+
+note left of FiguraGeometrica
+  **Ordine dei vertici:** i vertici sono memorizzati
+  nell'ordine in cui si incontrano percorrendo il
+  contorno della figura. Il lato successivo collega
+  ciascun vertice al successivo; l'ultimo vertice è
+  collegato al primo. L'ordine deve consentire di
+  rappresentare correttamente il contorno senza
+  auto-intersezioni.
+end note
 
 @enduml
