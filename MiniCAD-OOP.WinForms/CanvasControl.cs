@@ -1,5 +1,6 @@
 using MiniCAD_OOP.Models;
 using MiniCAD_OOP.Services;
+using MiniCAD_OOP.WinForms.Tools;
 using DrawingColor = System.Drawing.Color;
 using DrawingPointF = System.Drawing.PointF;
 
@@ -10,6 +11,7 @@ public sealed class CanvasControl : Control
     private const float MargineVista = 40;
     private const int SpaziaturaGriglia = 1;
     private readonly DocumentoCAD documento;
+    private IDrawingTool? strumentoAttivo;
 
     public CanvasControl(DocumentoCAD documento)
     {
@@ -19,8 +21,11 @@ public sealed class CanvasControl : Control
         BackColor = DrawingColor.White;
         DoubleBuffered = true;
         ResizeRedraw = true;
+        TabStop = true;
         Dock = DockStyle.Fill;
     }
+
+    public event Action<string>? StatusChanged;
 
     public DrawingPointF WorldToScreen(double x, double y)
     {
@@ -31,6 +36,63 @@ public sealed class CanvasControl : Control
         return new DrawingPointF(
             centroX + (float)(x * scala),
             centroY - (float)(y * scala));
+    }
+
+    public CoordinateMondo ScreenToWorld(Point posizione)
+    {
+        var scala = CalcolaScala();
+        var centroX = ClientSize.Width / 2d;
+        var centroY = ClientSize.Height / 2d;
+
+        return new CoordinateMondo(
+            (posizione.X - centroX) / scala,
+            (centroY - posizione.Y) / scala);
+    }
+
+    public void UsaStrumento(IDrawingTool strumento)
+    {
+        ArgumentNullException.ThrowIfNull(strumento);
+        if (ReferenceEquals(strumentoAttivo, strumento))
+        {
+            return;
+        }
+
+        if (strumentoAttivo is not null)
+        {
+            strumentoAttivo.EntityCreated -= AggiungiEntita;
+            strumentoAttivo.PreviewChanged -= Invalidate;
+            strumentoAttivo.StatusChanged -= SegnalaStato;
+            strumentoAttivo.Cancel();
+        }
+
+        strumentoAttivo = strumento;
+        strumentoAttivo.EntityCreated += AggiungiEntita;
+        strumentoAttivo.PreviewChanged += Invalidate;
+        strumentoAttivo.StatusChanged += SegnalaStato;
+        SegnalaStato("Strumento attivo.");
+        Invalidate();
+    }
+
+    public void AnnullaOperazione()
+    {
+        strumentoAttivo?.Cancel();
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        Focus();
+
+        if (e.Button == MouseButtons.Left)
+        {
+            strumentoAttivo?.OnMouseDown(ScreenToWorld(e.Location));
+        }
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        strumentoAttivo?.OnMouseMove(ScreenToWorld(e.Location));
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -46,6 +108,8 @@ public sealed class CanvasControl : Control
         {
             DisegnaEntita(e.Graphics, entita);
         }
+
+        strumentoAttivo?.DrawPreview(e.Graphics, coordinate => WorldToScreen(coordinate.X, coordinate.Y));
     }
 
     private float CalcolaScala()
@@ -126,6 +190,18 @@ public sealed class CanvasControl : Control
             centro.Y - raggio,
             raggio * 2,
             raggio * 2);
+    }
+
+    private void AggiungiEntita(EntitaGeometrica entita)
+    {
+        documento.AggiungiEntita(entita);
+        Invalidate();
+        SegnalaStato($"Aggiunta {entita.Nome}. Entità nel documento: {documento.ContaEntita()}.");
+    }
+
+    private void SegnalaStato(string messaggio)
+    {
+        StatusChanged?.Invoke(messaggio);
     }
 
     private DrawingPointF ToPointF(double x, double y)

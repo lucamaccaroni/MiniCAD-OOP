@@ -1,11 +1,18 @@
 using MiniCAD_OOP.Models;
 using MiniCAD_OOP.Services;
+using MiniCAD_OOP.WinForms.Tools;
 
 namespace MiniCAD_OOP.WinForms;
 
 internal sealed class MainForm : Form
 {
     private readonly DocumentoCAD documento;
+    private readonly CanvasControl canvas;
+    private readonly ToolStripButton puntoButton;
+    private readonly ToolStripButton lineaButton;
+    private readonly ToolStripStatusLabel statoLabel;
+    private readonly PointTool strumentoPunto;
+    private readonly LineTool strumentoLinea;
 
     public MainForm()
     {
@@ -14,7 +21,58 @@ internal sealed class MainForm : Form
         ClientSize = new Size(1100, 700);
 
         documento = CreaDocumentoDimostrativo();
-        Controls.Add(new CanvasControl(documento));
+
+        var contesto = new DrawingToolContext(CreaGeneratoreId(), documento.Entita[0].Layer);
+        strumentoPunto = new PointTool(contesto);
+        strumentoLinea = new LineTool(contesto);
+
+        statoLabel = new ToolStripStatusLabel("Pronto.");
+        canvas = new CanvasControl(documento);
+        canvas.StatusChanged += messaggio => statoLabel.Text = messaggio;
+
+        var selezioneButton = new ToolStripButton("Selezione")
+        {
+            Enabled = false,
+            ToolTipText = "Lo strumento di selezione sarà disponibile in una fase successiva."
+        };
+        puntoButton = new ToolStripButton("Punto") { CheckOnClick = false };
+        lineaButton = new ToolStripButton("Linea") { CheckOnClick = false };
+
+        puntoButton.Click += (_, _) => AttivaStrumentoPunto();
+        lineaButton.Click += (_, _) => AttivaStrumentoLinea();
+
+        var barraStrumenti = new ToolStrip
+        {
+            GripStyle = ToolStripGripStyle.Hidden,
+            Dock = DockStyle.Top
+        };
+        barraStrumenti.Items.AddRange(new ToolStripItem[]
+        {
+            selezioneButton,
+            new ToolStripSeparator(),
+            puntoButton,
+            lineaButton
+        });
+
+        var barraStato = new StatusStrip { Dock = DockStyle.Bottom };
+        barraStato.Items.Add(statoLabel);
+
+        Controls.Add(canvas);
+        Controls.Add(barraStato);
+        Controls.Add(barraStrumenti);
+
+        AttivaStrumentoPunto();
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == Keys.Escape)
+        {
+            canvas.AnnullaOperazione();
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     private static DocumentoCAD CreaDocumentoDimostrativo()
@@ -71,5 +129,70 @@ internal sealed class MainForm : Form
         documento.AggiungiEntita(quadrato);
 
         return documento;
+    }
+
+    private Func<int> CreaGeneratoreId()
+    {
+        var idUsati = new HashSet<int>();
+
+        foreach (var entita in documento.Entita)
+        {
+            idUsati.Add(entita.Id);
+
+            switch (entita)
+            {
+                case Punto punto:
+                    idUsati.Add(punto.Id);
+                    break;
+                case Linea linea:
+                    idUsati.Add(linea.Inizio.Id);
+                    idUsati.Add(linea.Fine.Id);
+                    break;
+                case FiguraGeometrica figura:
+                    foreach (var vertice in figura.Vertici)
+                    {
+                        idUsati.Add(vertice.Id);
+                    }
+
+                    break;
+            }
+        }
+
+        var prossimoId = 0;
+        return () =>
+        {
+            while (idUsati.Contains(prossimoId))
+            {
+                if (prossimoId == int.MaxValue)
+                {
+                    throw new InvalidOperationException("Non sono disponibili altri ID.");
+                }
+
+                prossimoId++;
+            }
+
+            var id = prossimoId;
+            idUsati.Add(id);
+            if (prossimoId < int.MaxValue)
+            {
+                prossimoId++;
+            }
+
+            return id;
+        };
+    }
+
+    private void AttivaStrumentoPunto()
+    {
+        canvas.UsaStrumento(strumentoPunto);
+        puntoButton.Checked = true;
+        lineaButton.Checked = false;
+    }
+
+    private void AttivaStrumentoLinea()
+    {
+        canvas.UsaStrumento(strumentoLinea);
+        puntoButton.Checked = false;
+        lineaButton.Checked = true;
     }
 }
