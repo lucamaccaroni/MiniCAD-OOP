@@ -8,4 +8,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Models\**\*.cs;Services\**\*.cs;Core\**\*.cs;MiniCAD-OOP.WinForms\**\*.cs" />
+    <ProjectReference Include="Core\MiniCAD-OOP.Core.csproj" />
+  </ItemGroup>
+
 </Project>

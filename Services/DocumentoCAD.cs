@@ -1,18 +1,23 @@
 using MiniCAD_OOP.Models;
+using System.Collections.ObjectModel;
 
 namespace MiniCAD_OOP.Services;
 
 public class DocumentoCAD
 {
     private readonly List<EntitaGeometrica> entita = new();
+    private readonly ReadOnlyCollection<EntitaGeometrica> vistaEntita;
 
     public DocumentoCAD(string nome)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nome);
         Nome = nome;
+        vistaEntita = entita.AsReadOnly();
     }
 
     public string Nome { get; }
+
+    public IReadOnlyList<EntitaGeometrica> Entita => vistaEntita;
 
     public void AggiungiEntita(EntitaGeometrica entita)
     {
