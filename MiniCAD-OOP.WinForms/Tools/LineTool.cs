@@ -3,7 +3,7 @@ using MiniCAD_OOP.Models;
 
 namespace MiniCAD_OOP.WinForms.Tools;
 
-public sealed class LineTool : IDrawingTool
+public sealed class LineTool : IDrawingTool, IEntityCreatingTool, IPreviewDrawingTool
 {
     private const double DistanzaMinimaMondo = 0.1;
 
@@ -23,18 +23,31 @@ public sealed class LineTool : IDrawingTool
 
     public event Action<string>? StatusChanged;
 
-    public void OnMouseDown(CoordinateMondo posizione)
+    public void OnMouseDown(PosizionePuntatore posizione)
     {
+        var coordinateMondo = posizione.Mondo;
+        if (!CoordinateValide(coordinateMondo))
+        {
+            StatusChanged?.Invoke("Coordinate non valide: X e Y devono essere valori finiti.");
+            return;
+        }
+
         if (inizio is null)
         {
-            inizio = posizione;
-            anteprima = posizione;
+            inizio = coordinateMondo;
+            anteprima = coordinateMondo;
             PreviewChanged?.Invoke();
             StatusChanged?.Invoke("Linea: seleziona il secondo estremo. Premi Esc per annullare.");
             return;
         }
 
-        if (DistanzaInferioreAllaSoglia(inizio.Value, posizione))
+        if (!CoordinateValide(inizio.Value))
+        {
+            StatusChanged?.Invoke("Estremo iniziale non valido. Annulla la linea e riprova.");
+            return;
+        }
+
+        if (DistanzaInferioreAllaSoglia(inizio.Value, coordinateMondo))
         {
             StatusChanged?.Invoke(
                 $"Estremi troppo vicini (minimo {DistanzaMinimaMondo} unità mondo). Seleziona un altro punto o premi Esc.");
@@ -56,8 +69,8 @@ public sealed class LineTool : IDrawingTool
             $"Estremo linea {idFine}",
             context.Colore,
             context.Layer,
-            posizione.X,
-            posizione.Y);
+            coordinateMondo.X,
+            coordinateMondo.Y);
 
         var idLinea = context.GeneraId();
         var linea = new Linea(
@@ -69,6 +82,7 @@ public sealed class LineTool : IDrawingTool
             puntoFine);
 
         inizio = null;
+        anteprima = default;
         PreviewChanged?.Invoke();
         EntityCreated?.Invoke(linea);
         StatusChanged?.Invoke($"Creata {linea.Nome}.");
@@ -103,14 +117,19 @@ public sealed class LineTool : IDrawingTool
         return scala < DistanzaMinimaMondo / fattoreLunghezza;
     }
 
-    public void OnMouseMove(CoordinateMondo posizione)
+    public void OnMouseMove(PosizionePuntatore posizione)
     {
         if (inizio is null)
         {
             return;
         }
 
-        anteprima = posizione;
+        if (!CoordinateValide(posizione.Mondo))
+        {
+            return;
+        }
+
+        anteprima = posizione.Mondo;
         PreviewChanged?.Invoke();
     }
 
@@ -146,7 +165,13 @@ public sealed class LineTool : IDrawingTool
         }
 
         inizio = null;
+        anteprima = default;
         PreviewChanged?.Invoke();
         StatusChanged?.Invoke("Disegno della linea annullato.");
+    }
+
+    private static bool CoordinateValide(CoordinateMondo coordinate)
+    {
+        return double.IsFinite(coordinate.X) && double.IsFinite(coordinate.Y);
     }
 }

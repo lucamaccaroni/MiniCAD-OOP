@@ -10,9 +10,11 @@ internal sealed class MainForm : Form
     private readonly CanvasControl canvas;
     private readonly ToolStripButton puntoButton;
     private readonly ToolStripButton lineaButton;
+    private readonly ToolStripButton selezioneButton;
     private readonly ToolStripStatusLabel statoLabel;
     private readonly PointTool strumentoPunto;
     private readonly LineTool strumentoLinea;
+    private readonly SelectionTool strumentoSelezione;
 
     public MainForm()
     {
@@ -29,15 +31,15 @@ internal sealed class MainForm : Form
         statoLabel = new ToolStripStatusLabel("Pronto.");
         canvas = new CanvasControl(documento);
         canvas.StatusChanged += messaggio => statoLabel.Text = messaggio;
+        strumentoSelezione = new SelectionTool(
+            documento,
+            coordinate => canvas.WorldToScreen(coordinate.X, coordinate.Y));
 
-        var selezioneButton = new ToolStripButton("Selezione")
-        {
-            Enabled = false,
-            ToolTipText = "Lo strumento di selezione sarà disponibile in una fase successiva."
-        };
+        selezioneButton = new ToolStripButton("Selezione") { CheckOnClick = false };
         puntoButton = new ToolStripButton("Punto") { CheckOnClick = false };
         lineaButton = new ToolStripButton("Linea") { CheckOnClick = false };
 
+        selezioneButton.Click += (_, _) => AttivaStrumentoSelezione();
         puntoButton.Click += (_, _) => AttivaStrumentoPunto();
         lineaButton.Click += (_, _) => AttivaStrumentoLinea();
 
@@ -185,6 +187,7 @@ internal sealed class MainForm : Form
     private void AttivaStrumentoPunto()
     {
         canvas.UsaStrumento(strumentoPunto);
+        selezioneButton.Checked = false;
         puntoButton.Checked = true;
         lineaButton.Checked = false;
     }
@@ -192,7 +195,16 @@ internal sealed class MainForm : Form
     private void AttivaStrumentoLinea()
     {
         canvas.UsaStrumento(strumentoLinea);
+        selezioneButton.Checked = false;
         puntoButton.Checked = false;
         lineaButton.Checked = true;
+    }
+
+    private void AttivaStrumentoSelezione()
+    {
+        canvas.UsaStrumento(strumentoSelezione);
+        selezioneButton.Checked = true;
+        puntoButton.Checked = false;
+        lineaButton.Checked = false;
     }
 }

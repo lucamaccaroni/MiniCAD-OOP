@@ -12,6 +12,7 @@ public sealed class CanvasControl : Control
     private const int SpaziaturaGriglia = 1;
     private readonly DocumentoCAD documento;
     private IDrawingTool? strumentoAttivo;
+    private EntitaGeometrica? entitaSelezionata;
 
     public CanvasControl(DocumentoCAD documento)
     {
@@ -59,16 +60,12 @@ public sealed class CanvasControl : Control
 
         if (strumentoAttivo is not null)
         {
-            strumentoAttivo.EntityCreated -= AggiungiEntita;
-            strumentoAttivo.PreviewChanged -= Invalidate;
-            strumentoAttivo.StatusChanged -= SegnalaStato;
+            ScollegaEventiStrumento(strumentoAttivo);
             strumentoAttivo.Cancel();
         }
 
         strumentoAttivo = strumento;
-        strumentoAttivo.EntityCreated += AggiungiEntita;
-        strumentoAttivo.PreviewChanged += Invalidate;
-        strumentoAttivo.StatusChanged += SegnalaStato;
+        CollegaEventiStrumento(strumentoAttivo);
         SegnalaStato("Strumento attivo.");
         Invalidate();
     }
@@ -85,14 +82,14 @@ public sealed class CanvasControl : Control
 
         if (e.Button == MouseButtons.Left)
         {
-            strumentoAttivo?.OnMouseDown(ScreenToWorld(e.Location));
+            strumentoAttivo?.OnMouseDown(CreaPosizionePuntatore(e.Location));
         }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        strumentoAttivo?.OnMouseMove(ScreenToWorld(e.Location));
+        strumentoAttivo?.OnMouseMove(CreaPosizionePuntatore(e.Location));
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -109,7 +106,63 @@ public sealed class CanvasControl : Control
             DisegnaEntita(e.Graphics, entita);
         }
 
+        if (entitaSelezionata is not null)
+        {
+            DisegnaEvidenziazione(e.Graphics, entitaSelezionata);
+        }
+
         strumentoAttivo?.DrawPreview(e.Graphics, coordinate => WorldToScreen(coordinate.X, coordinate.Y));
+    }
+
+    private PosizionePuntatore CreaPosizionePuntatore(Point posizioneSchermo)
+    {
+        return new PosizionePuntatore(posizioneSchermo, ScreenToWorld(posizioneSchermo));
+    }
+
+    private void SelezionaEntita(EntitaGeometrica? entita)
+    {
+        entitaSelezionata = entita;
+        Invalidate();
+    }
+
+    private void CollegaEventiStrumento(IDrawingTool strumento)
+    {
+        strumento.StatusChanged += SegnalaStato;
+
+        if (strumento is IEntityCreatingTool strumentoCreazione)
+        {
+            strumentoCreazione.EntityCreated += AggiungiEntita;
+        }
+
+        if (strumento is IPreviewDrawingTool strumentoAnteprima)
+        {
+            strumentoAnteprima.PreviewChanged += Invalidate;
+        }
+
+        if (strumento is ISelectionTool strumentoSelezione)
+        {
+            strumentoSelezione.SelectionChanged += SelezionaEntita;
+        }
+    }
+
+    private void ScollegaEventiStrumento(IDrawingTool strumento)
+    {
+        strumento.StatusChanged -= SegnalaStato;
+
+        if (strumento is IEntityCreatingTool strumentoCreazione)
+        {
+            strumentoCreazione.EntityCreated -= AggiungiEntita;
+        }
+
+        if (strumento is IPreviewDrawingTool strumentoAnteprima)
+        {
+            strumentoAnteprima.PreviewChanged -= Invalidate;
+        }
+
+        if (strumento is ISelectionTool strumentoSelezione)
+        {
+            strumentoSelezione.SelectionChanged -= SelezionaEntita;
+        }
     }
 
     private float CalcolaScala()
@@ -190,6 +243,31 @@ public sealed class CanvasControl : Control
             centro.Y - raggio,
             raggio * 2,
             raggio * 2);
+    }
+
+    private void DisegnaEvidenziazione(Graphics graphics, EntitaGeometrica entita)
+    {
+        using var penna = new Pen(DrawingColor.DodgerBlue, 3);
+
+        switch (entita)
+        {
+            case Punto punto:
+                var centro = ToPointF(punto.X, punto.Y);
+                graphics.DrawEllipse(penna, centro.X - 7, centro.Y - 7, 14, 14);
+                break;
+            case Linea linea:
+                graphics.DrawLine(
+                    penna,
+                    ToPointF(linea.Inizio.X, linea.Inizio.Y),
+                    ToPointF(linea.Fine.X, linea.Fine.Y));
+                break;
+            case FiguraGeometrica figura:
+                var vertici = figura.Vertici
+                    .Select(vertice => ToPointF(vertice.X, vertice.Y))
+                    .ToArray();
+                graphics.DrawPolygon(penna, vertici);
+                break;
+        }
     }
 
     private void AggiungiEntita(EntitaGeometrica entita)
