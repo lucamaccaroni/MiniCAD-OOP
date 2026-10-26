@@ -28,6 +28,29 @@ public sealed class CanvasControl : Control
 
     public event Action<string>? StatusChanged;
 
+    public event Action<bool>? SelectionAvailabilityChanged;
+
+    public bool HaSelezione => entitaSelezionata is not null;
+
+    public bool EliminaEntitaSelezionata()
+    {
+        if (entitaSelezionata is null)
+        {
+            return false;
+        }
+
+        var entita = entitaSelezionata;
+        var eliminata = documento.EliminaEntita(entita.Id);
+        entitaSelezionata = null;
+        SelectionAvailabilityChanged?.Invoke(false);
+        Invalidate();
+
+        SegnalaStato(eliminata
+            ? $"Eliminata {entita.Nome}."
+            : $"{entita.Nome} non è più presente nel documento.");
+        return eliminata;
+    }
+
     public DrawingPointF WorldToScreen(double x, double y)
     {
         var scala = CalcolaScala();
@@ -121,8 +144,15 @@ public sealed class CanvasControl : Control
 
     private void SelezionaEntita(EntitaGeometrica? entita)
     {
+        var avevaSelezione = entitaSelezionata is not null;
         entitaSelezionata = entita;
         Invalidate();
+
+        var haSelezione = entitaSelezionata is not null;
+        if (avevaSelezione != haSelezione)
+        {
+            SelectionAvailabilityChanged?.Invoke(haSelezione);
+        }
     }
 
     private void CollegaEventiStrumento(IDrawingTool strumento)

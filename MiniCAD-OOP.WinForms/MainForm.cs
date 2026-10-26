@@ -11,6 +11,7 @@ internal sealed class MainForm : Form
     private readonly ToolStripButton puntoButton;
     private readonly ToolStripButton lineaButton;
     private readonly ToolStripButton selezioneButton;
+    private readonly ToolStripButton eliminaButton;
     private readonly ToolStripStatusLabel statoLabel;
     private readonly PointTool strumentoPunto;
     private readonly LineTool strumentoLinea;
@@ -36,10 +37,13 @@ internal sealed class MainForm : Form
             coordinate => canvas.WorldToScreen(coordinate.X, coordinate.Y));
 
         selezioneButton = new ToolStripButton("Selezione") { CheckOnClick = false };
+        eliminaButton = new ToolStripButton("Elimina") { Enabled = false };
+        canvas.SelectionAvailabilityChanged += disponibile => eliminaButton.Enabled = disponibile;
         puntoButton = new ToolStripButton("Punto") { CheckOnClick = false };
         lineaButton = new ToolStripButton("Linea") { CheckOnClick = false };
 
         selezioneButton.Click += (_, _) => AttivaStrumentoSelezione();
+        eliminaButton.Click += (_, _) => EliminaEntitaSelezionata();
         puntoButton.Click += (_, _) => AttivaStrumentoPunto();
         lineaButton.Click += (_, _) => AttivaStrumentoLinea();
 
@@ -51,6 +55,7 @@ internal sealed class MainForm : Form
         barraStrumenti.Items.AddRange(new ToolStripItem[]
         {
             selezioneButton,
+            eliminaButton,
             new ToolStripSeparator(),
             puntoButton,
             lineaButton
@@ -74,7 +79,18 @@ internal sealed class MainForm : Form
             return true;
         }
 
+        if (keyData == Keys.Delete)
+        {
+            EliminaEntitaSelezionata();
+            return true;
+        }
+
         return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private void EliminaEntitaSelezionata()
+    {
+        canvas.EliminaEntitaSelezionata();
     }
 
     private static DocumentoCAD CreaDocumentoDimostrativo()
