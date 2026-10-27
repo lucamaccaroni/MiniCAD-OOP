@@ -43,6 +43,31 @@ public class DocumentoCAD
         return true;
     }
 
+    public void SostituisciEntita(int id, EntitaGeometrica sostituta)
+    {
+        ArgumentNullException.ThrowIfNull(sostituta);
+
+        if (id < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), "L'ID non può essere negativo.");
+        }
+
+        if (sostituta.Id != id)
+        {
+            throw new ArgumentException(
+                "L'ID della sostituta deve corrispondere all'ID dell'entità da sostituire.",
+                nameof(sostituta));
+        }
+
+        var indice = entita.FindIndex(esistente => esistente.Id == id);
+        if (indice < 0)
+        {
+            throw new KeyNotFoundException($"Non esiste un'entità con ID {id}.");
+        }
+
+        entita[indice] = sostituta;
+    }
+
     public EntitaGeometrica CercaEntita(int id)
     {
         return entita.Find(entita => entita.Id == id)

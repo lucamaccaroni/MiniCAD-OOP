@@ -22,4 +22,10 @@ public class Rettangolo : FiguraGeometrica
     {
         return CalcolaPerimetro();
     }
+
+    protected override FiguraGeometrica CreaCopiaTraslata(
+        IReadOnlyList<Punto> verticiTraslati)
+    {
+        return new Rettangolo(Id, Nome, Colore, Layer, verticiTraslati);
+    }
 }

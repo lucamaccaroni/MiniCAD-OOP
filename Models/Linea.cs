@@ -16,6 +16,19 @@ public class Linea : EntitaGeometrica
 
     public Punto Fine { get; }
 
+    public override Linea CopiaTraslata(double deltaX, double deltaY)
+    {
+        ValidaDeltaTraslazione(deltaX, deltaY);
+
+        return new Linea(
+            Id,
+            Nome,
+            Colore,
+            Layer,
+            Inizio.CopiaTraslata(deltaX, deltaY),
+            Fine.CopiaTraslata(deltaX, deltaY));
+    }
+
     public double Lunghezza()
     {
         return Inizio.Distanza(Fine);

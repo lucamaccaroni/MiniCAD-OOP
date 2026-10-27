@@ -30,3 +30,27 @@ public interface ISelectionTool
 {
     event Action<EntitaGeometrica?>? SelectionChanged;
 }
+
+public interface IMouseUpDrawingTool
+{
+    void OnMouseUp(PosizionePuntatore posizione);
+}
+
+public interface IMouseCaptureDrawingTool
+{
+    event Action<bool>? MouseCaptureRequested;
+}
+
+public interface IEntityPreviewTool : IEntityMovingTool
+{
+    EntitaGeometrica? EntitaAnteprima { get; }
+}
+
+public interface IEntityMovingTool
+{
+    EntitaGeometrica? EntitaDaSpostare { get; }
+
+    event Action<EntitaGeometrica, double, double>? MoveRequested;
+
+    void AggiornaEntita(EntitaGeometrica? entita);
+}

@@ -26,4 +26,10 @@ public class Quadrato : FiguraGeometrica
     {
         return CalcolaPerimetro();
     }
+
+    protected override FiguraGeometrica CreaCopiaTraslata(
+        IReadOnlyList<Punto> verticiTraslati)
+    {
+        return new Quadrato(Id, Nome, Colore, Layer, verticiTraslati);
+    }
 }

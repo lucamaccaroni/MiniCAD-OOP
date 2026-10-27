@@ -31,5 +31,20 @@ public abstract class EntitaGeometrica
 
     public Layer Layer { get; }
 
+    public abstract EntitaGeometrica CopiaTraslata(double deltaX, double deltaY);
+
     public abstract string Descrizione();
+
+    protected static void ValidaDeltaTraslazione(double deltaX, double deltaY)
+    {
+        if (!double.IsFinite(deltaX))
+        {
+            throw new ArgumentOutOfRangeException(nameof(deltaX), "Il delta X deve essere finito.");
+        }
+
+        if (!double.IsFinite(deltaY))
+        {
+            throw new ArgumentOutOfRangeException(nameof(deltaY), "Il delta Y deve essere finito.");
+        }
+    }
 }

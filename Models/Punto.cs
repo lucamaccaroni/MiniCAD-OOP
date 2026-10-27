@@ -23,6 +23,19 @@ public class Punto : EntitaGeometrica
 
     public double Y { get; }
 
+    public override Punto CopiaTraslata(double deltaX, double deltaY)
+    {
+        ValidaDeltaTraslazione(deltaX, deltaY);
+
+        return new Punto(
+            Id,
+            Nome,
+            Colore,
+            Layer,
+            X + deltaX,
+            Y + deltaY);
+    }
+
     public double Distanza(Punto altro)
     {
         ArgumentNullException.ThrowIfNull(altro);

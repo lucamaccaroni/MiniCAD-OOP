@@ -52,6 +52,16 @@ public abstract class FiguraGeometrica : EntitaGeometrica
 
     public abstract double Perimetro();
 
+    public override FiguraGeometrica CopiaTraslata(double deltaX, double deltaY)
+    {
+        ValidaDeltaTraslazione(deltaX, deltaY);
+        var verticiTraslati = Vertici
+            .Select(punto => punto.CopiaTraslata(deltaX, deltaY))
+            .ToArray();
+
+        return CreaCopiaTraslata(verticiTraslati);
+    }
+
     public override string Descrizione()
     {
         var vertici = string.Join(
@@ -187,6 +197,9 @@ public abstract class FiguraGeometrica : EntitaGeometrica
 
         return (coordinate, scala);
     }
+
+    protected abstract FiguraGeometrica CreaCopiaTraslata(
+        IReadOnlyList<Punto> verticiTraslati);
 
     private static double ProdottoScalato(double fattore, double scalaX, double scalaY)
     {

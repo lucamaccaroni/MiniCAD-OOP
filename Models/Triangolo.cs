@@ -22,4 +22,10 @@ public class Triangolo : FiguraGeometrica
     {
         return CalcolaPerimetro();
     }
+
+    protected override FiguraGeometrica CreaCopiaTraslata(
+        IReadOnlyList<Punto> verticiTraslati)
+    {
+        return new Triangolo(Id, Nome, Colore, Layer, verticiTraslati);
+    }
 }

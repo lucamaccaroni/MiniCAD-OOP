@@ -13,6 +13,7 @@ public sealed class CanvasControl : Control
     private readonly DocumentoCAD documento;
     private IDrawingTool? strumentoAttivo;
     private EntitaGeometrica? entitaSelezionata;
+    private bool catturaMouseAttiva;
 
     public CanvasControl(DocumentoCAD documento)
     {
@@ -32,6 +33,8 @@ public sealed class CanvasControl : Control
 
     public bool HaSelezione => entitaSelezionata is not null;
 
+    public EntitaGeometrica? EntitaSelezionata => entitaSelezionata;
+
     public bool EliminaEntitaSelezionata()
     {
         if (entitaSelezionata is null)
@@ -40,6 +43,13 @@ public sealed class CanvasControl : Control
         }
 
         var entita = entitaSelezionata;
+        if (strumentoAttivo is IEntityMovingTool strumentoSposta
+            && ReferenceEquals(strumentoSposta.EntitaDaSpostare, entita))
+        {
+            strumentoAttivo.Cancel();
+            strumentoSposta.AggiornaEntita(null);
+        }
+
         var eliminata = documento.EliminaEntita(entita.Id);
         entitaSelezionata = null;
         SelectionAvailabilityChanged?.Invoke(false);
@@ -87,6 +97,7 @@ public sealed class CanvasControl : Control
             strumentoAttivo.Cancel();
         }
 
+        RilasciaCatturaMouse();
         strumentoAttivo = strumento;
         CollegaEventiStrumento(strumentoAttivo);
         SegnalaStato("Strumento attivo.");
@@ -115,6 +126,28 @@ public sealed class CanvasControl : Control
         strumentoAttivo?.OnMouseMove(CreaPosizionePuntatore(e.Location));
     }
 
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+
+        if (e.Button == MouseButtons.Left
+            && strumentoAttivo is IMouseUpDrawingTool strumentoCompletamento)
+        {
+            strumentoCompletamento.OnMouseUp(CreaPosizionePuntatore(e.Location));
+        }
+    }
+
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        base.OnMouseCaptureChanged(e);
+
+        if (!Capture && catturaMouseAttiva)
+        {
+            catturaMouseAttiva = false;
+            strumentoAttivo?.Cancel();
+        }
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -124,12 +157,24 @@ public sealed class CanvasControl : Control
         DisegnaGriglia(e.Graphics);
         DisegnaAssi(e.Graphics);
 
+        var strumentoPreview = strumentoAttivo as IEntityPreviewTool;
+        var mostraPreview = strumentoPreview?.EntitaAnteprima is not null;
         foreach (var entita in documento.Entita)
         {
+            if (mostraPreview && ReferenceEquals(entita, strumentoPreview!.EntitaDaSpostare))
+            {
+                continue;
+            }
+
             DisegnaEntita(e.Graphics, entita);
         }
 
-        if (entitaSelezionata is not null)
+        if (mostraPreview)
+        {
+            DisegnaEntita(e.Graphics, strumentoPreview!.EntitaAnteprima!);
+            DisegnaEvidenziazione(e.Graphics, strumentoPreview.EntitaAnteprima!);
+        }
+        else if (entitaSelezionata is not null)
         {
             DisegnaEvidenziazione(e.Graphics, entitaSelezionata);
         }
@@ -173,6 +218,16 @@ public sealed class CanvasControl : Control
         {
             strumentoSelezione.SelectionChanged += SelezionaEntita;
         }
+
+        if (strumento is IEntityMovingTool strumentoSposta)
+        {
+            strumentoSposta.MoveRequested += ApplicaSpostamento;
+        }
+
+        if (strumento is IMouseCaptureDrawingTool strumentoCattura)
+        {
+            strumentoCattura.MouseCaptureRequested += ImpostaCatturaMouse;
+        }
     }
 
     private void ScollegaEventiStrumento(IDrawingTool strumento)
@@ -192,6 +247,78 @@ public sealed class CanvasControl : Control
         if (strumento is ISelectionTool strumentoSelezione)
         {
             strumentoSelezione.SelectionChanged -= SelezionaEntita;
+        }
+
+        if (strumento is IEntityMovingTool strumentoSposta)
+        {
+            strumentoSposta.MoveRequested -= ApplicaSpostamento;
+        }
+
+        if (strumento is IMouseCaptureDrawingTool strumentoCattura)
+        {
+            strumentoCattura.MouseCaptureRequested -= ImpostaCatturaMouse;
+        }
+    }
+
+    private void ImpostaCatturaMouse(bool attiva)
+    {
+        catturaMouseAttiva = attiva;
+        Capture = attiva;
+    }
+
+    private void RilasciaCatturaMouse()
+    {
+        catturaMouseAttiva = false;
+        Capture = false;
+    }
+
+    private void ApplicaSpostamento(
+        EntitaGeometrica entita,
+        double deltaX,
+        double deltaY)
+    {
+        if (!ReferenceEquals(entitaSelezionata, entita))
+        {
+            SegnalaStato("L'entità selezionata non è più disponibile; spostamento non applicato.");
+            return;
+        }
+
+        if (!documento.Entita.Any(presente => ReferenceEquals(presente, entita)))
+        {
+            SelezionaEntita(null);
+            SegnalaStato("L'entità selezionata non è più nel documento; selezione rimossa.");
+            return;
+        }
+
+        try
+        {
+            var sostituta = entita.CopiaTraslata(deltaX, deltaY);
+            documento.SostituisciEntita(entita.Id, sostituta);
+            entitaSelezionata = sostituta;
+
+            if (strumentoAttivo is IEntityMovingTool strumentoSposta)
+            {
+                strumentoSposta.AggiornaEntita(sostituta);
+            }
+
+            Invalidate();
+            SegnalaStato($"Spostata {sostituta.Nome}.");
+        }
+        catch (ArgumentException errore)
+        {
+            Invalidate();
+            SegnalaStato($"Spostamento non applicato: {errore.Message}");
+        }
+        catch (KeyNotFoundException errore)
+        {
+            if (ReferenceEquals(entitaSelezionata, entita)
+                && !documento.Entita.Any(presente => ReferenceEquals(presente, entita)))
+            {
+                SelezionaEntita(null);
+            }
+
+            Invalidate();
+            SegnalaStato($"Spostamento non applicato: {errore.Message}");
         }
     }
 

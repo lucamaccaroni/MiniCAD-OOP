@@ -11,6 +11,7 @@ internal sealed class MainForm : Form
     private readonly ToolStripButton puntoButton;
     private readonly ToolStripButton lineaButton;
     private readonly ToolStripButton selezioneButton;
+    private readonly ToolStripButton spostaButton;
     private readonly ToolStripButton eliminaButton;
     private readonly ToolStripStatusLabel statoLabel;
     private readonly PointTool strumentoPunto;
@@ -37,12 +38,18 @@ internal sealed class MainForm : Form
             coordinate => canvas.WorldToScreen(coordinate.X, coordinate.Y));
 
         selezioneButton = new ToolStripButton("Selezione") { CheckOnClick = false };
+        spostaButton = new ToolStripButton("Sposta") { Enabled = false };
         eliminaButton = new ToolStripButton("Elimina") { Enabled = false };
-        canvas.SelectionAvailabilityChanged += disponibile => eliminaButton.Enabled = disponibile;
+        canvas.SelectionAvailabilityChanged += disponibile =>
+        {
+            eliminaButton.Enabled = disponibile;
+            spostaButton.Enabled = disponibile;
+        };
         puntoButton = new ToolStripButton("Punto") { CheckOnClick = false };
         lineaButton = new ToolStripButton("Linea") { CheckOnClick = false };
 
         selezioneButton.Click += (_, _) => AttivaStrumentoSelezione();
+        spostaButton.Click += (_, _) => AttivaStrumentoSposta();
         eliminaButton.Click += (_, _) => EliminaEntitaSelezionata();
         puntoButton.Click += (_, _) => AttivaStrumentoPunto();
         lineaButton.Click += (_, _) => AttivaStrumentoLinea();
@@ -55,6 +62,7 @@ internal sealed class MainForm : Form
         barraStrumenti.Items.AddRange(new ToolStripItem[]
         {
             selezioneButton,
+            spostaButton,
             eliminaButton,
             new ToolStripSeparator(),
             puntoButton,
@@ -204,6 +212,7 @@ internal sealed class MainForm : Form
     {
         canvas.UsaStrumento(strumentoPunto);
         selezioneButton.Checked = false;
+        spostaButton.Checked = false;
         puntoButton.Checked = true;
         lineaButton.Checked = false;
     }
@@ -212,6 +221,7 @@ internal sealed class MainForm : Form
     {
         canvas.UsaStrumento(strumentoLinea);
         selezioneButton.Checked = false;
+        spostaButton.Checked = false;
         puntoButton.Checked = false;
         lineaButton.Checked = true;
     }
@@ -220,6 +230,21 @@ internal sealed class MainForm : Form
     {
         canvas.UsaStrumento(strumentoSelezione);
         selezioneButton.Checked = true;
+        spostaButton.Checked = false;
+        puntoButton.Checked = false;
+        lineaButton.Checked = false;
+    }
+
+    private void AttivaStrumentoSposta()
+    {
+        if (canvas.EntitaSelezionata is not { } entita)
+        {
+            return;
+        }
+
+        canvas.UsaStrumento(new MoveTool(entita));
+        selezioneButton.Checked = false;
+        spostaButton.Checked = true;
         puntoButton.Checked = false;
         lineaButton.Checked = false;
     }
